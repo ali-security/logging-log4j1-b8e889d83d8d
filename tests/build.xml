@@ -173,7 +173,8 @@
                                      CyclicBuffer, OR,
                                      LevelMatchFilter, PatternParser, 
                                      ErrorHandler,Rewrite, JNDIUtil,
-									 HardenedObjectInputStream"/>
+									 HardenedObjectInputStream,
+                                     NTEventLogAppenderDllPath"/>
 
   <!-- ================================================================= -->
   <!-- Longer unit tests                                                 -->
@@ -476,6 +477,44 @@
       <classpath refid="tests.classpath"/>
       <formatter type="plain" usefile="false"/>
       <test name="org.apache.log4j.nt.NTEventLogAppenderTest" />
+    </junit>
+  </target>
+
+  <!-- Runs NTEventLogAppenderDllPathTest on any platform. A bogus NTEventLogAppender
+       library is planted on java.library.path and log4j.nteventlog.dll.path
+       names a native library of the running JVM, so NTEventLogAppender only
+       initializes when it loads the configured absolute path via System.load
+       instead of searching the library path. -->
+  <target name="NTEventLogAppenderDllPath" depends="build">
+    <pathconvert property="nteventlog.dll.path">
+      <path>
+        <fileset dir="${java.home}" includes="**/libjava.so,**/libjava.dylib,bin/java.dll"/>
+      </path>
+    </pathconvert>
+    <fail message="No native library of the running JVM found under ${java.home}">
+      <condition>
+        <equals arg1="${nteventlog.dll.path}" arg2=""/>
+      </condition>
+    </fail>
+    <echo message="log4j.nteventlog.dll.path=${nteventlog.dll.path}"/>
+    <property name="nteventlog.planted.dir" location="output/nteventlog-planted"/>
+    <delete dir="${nteventlog.planted.dir}"/>
+    <mkdir dir="${nteventlog.planted.dir}"/>
+    <echo file="${nteventlog.planted.dir}/libNTEventLogAppender.so" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/libNTEventLogAppender.${os.arch}.so" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/libNTEventLogAppender.dylib" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/libNTEventLogAppender.${os.arch}.dylib" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/libNTEventLogAppender.jnilib" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/libNTEventLogAppender.${os.arch}.jnilib" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/NTEventLogAppender.dll" message="planted"/>
+    <echo file="${nteventlog.planted.dir}/NTEventLogAppender.${os.arch}.dll" message="planted"/>
+    <junit printsummary="yes" fork="yes"
+        haltonfailure="${haltonfailure}" dir="${basedir}">
+      <sysproperty key="log4j.nteventlog.dll.path" value="${nteventlog.dll.path}"/>
+      <sysproperty key="java.library.path" value="${nteventlog.planted.dir}"/>
+      <classpath refid="tests.classpath"/>
+      <formatter type="plain" usefile="false"/>
+      <test name="org.apache.log4j.nt.NTEventLogAppenderDllPathTest" />
     </junit>
   </target>
 
